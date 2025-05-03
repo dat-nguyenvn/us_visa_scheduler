@@ -29,7 +29,12 @@ PASSWORD = config['PERSONAL_INFO']['PASSWORD']
 SCHEDULE_ID = config['PERSONAL_INFO']['SCHEDULE_ID']
 # Target Period:
 PRIOD_START = config['PERSONAL_INFO']['PRIOD_START']
+
 PRIOD_END = config['PERSONAL_INFO']['PRIOD_END']
+print("PRIOD_START", type(PRIOD_START))
+print("PRIOD_START",PRIOD_START)
+print("PRIOD_END", type(PRIOD_END))
+print("PRIOD_END",PRIOD_END)
 # Embassy Section:
 YOUR_EMBASSY = config['PERSONAL_INFO']['YOUR_EMBASSY'] 
 EMBASSY = Embassies[YOUR_EMBASSY][0]
@@ -156,14 +161,27 @@ def start_process():
 
 def reschedule(date):
     time = get_time(date)
+    #print("APPOINTMENT_URL",APPOINTMENT_URL)
     driver.get(APPOINTMENT_URL)
     headers = {
         "User-Agent": driver.execute_script("return navigator.userAgent;"),
         "Referer": APPOINTMENT_URL,
         "Cookie": "_yatri_session=" + driver.get_cookie("_yatri_session")["value"]
     }
+    # print("headers",headers)
+    # print("******************************************************")
+    # #print("utf8:", driver.find_element(by=By.NAME, value='utf8').get_attribute('value'))
+    # print("authenticity_token:", driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'))
+    # print("confirmed_limit_message:", driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'))
+    # print("use_consulate_appointment_capacity:", driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'))
+    # print("facility_id:", FACILITY_ID)
+    # print("date:", date)
+    # print("time:", time)
+      
+
+
     data = {
-        "utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
+        #"utf8": driver.find_element(by=By.NAME, value='utf8').get_attribute('value'),
         "authenticity_token": driver.find_element(by=By.NAME, value='authenticity_token').get_attribute('value'),
         "confirmed_limit_message": driver.find_element(by=By.NAME, value='confirmed_limit_message').get_attribute('value'),
         "use_consulate_appointment_capacity": driver.find_element(by=By.NAME, value='use_consulate_appointment_capacity').get_attribute('value'),
@@ -171,7 +189,10 @@ def reschedule(date):
         "appointments[consulate_appointment][date]": date,
         "appointments[consulate_appointment][time]": time,
     }
+
     r = requests.post(APPOINTMENT_URL, headers=headers, data=data)
+    print("ANH YEU EM R :",r)
+    print("ANH YEU EM R :",r.text)
     if(r.text.find('Successfully Scheduled') != -1):
         title = "SUCCESS"
         msg = f"Rescheduled Successfully! {date} {time}"
@@ -184,8 +205,11 @@ def reschedule(date):
 def get_date():
     # Requesting to get the whole available dates
     session = driver.get_cookie("_yatri_session")["value"]
+    print("session",session)
     script = JS_SCRIPT % (str(DATE_URL), session)
+    print("script",script)
     content = driver.execute_script(script)
+    print("content",content)
     return json.loads(content)
 
 def get_time(date):
@@ -207,15 +231,18 @@ def is_logged_in():
 
 
 def get_available_date(dates):
+    #print("i am here aaaaa")
     # Evaluation of different available dates
     def is_in_period(date, PSD, PED):
         new_date = datetime.strptime(date, "%Y-%m-%d")
         result = ( PED > new_date and new_date > PSD )
-        # print(f'{new_date.date()} : {result}', end=", ")
+        #print(f'{new_date.date()} : {result}', end=", ")
         return result
-    
-    PED = datetime.strptime(PRIOD_END, "%Y-%m-%d")
+    #print("dataaa",dates)
+    #dates
     PSD = datetime.strptime(PRIOD_START, "%Y-%m-%d")
+    PED = datetime.strptime(PRIOD_END, "%Y-%m-%d")
+    #print(f"PED:{PED}")
     for d in dates:
         date = d.get('date')
         if is_in_period(date, PSD, PED):
@@ -251,6 +278,7 @@ if __name__ == "__main__":
             print(msg)
             info_logger(LOG_FILE_NAME, msg)
             dates = get_date()
+            print("done get date")
             if not dates:
                 # Ban Situation
                 msg = f"List is empty, Probabely banned!\n\tSleep for {BAN_COOLDOWN_TIME} hours!\n"
@@ -268,11 +296,14 @@ if __name__ == "__main__":
                 msg = "Available dates:\n"+ msg
                 print(msg)
                 info_logger(LOG_FILE_NAME, msg)
+
                 date = get_available_date(dates)
+                #print(f"anh yeu em ^^^^^^^^^^^^^^^^^^^^")
                 if date:
                     # A good date to schedule for
                     END_MSG_TITLE, msg = reschedule(date)
                     break
+                
                 RETRY_WAIT_TIME = random.randint(RETRY_TIME_L_BOUND, RETRY_TIME_U_BOUND)
                 t1 = time.time()
                 total_time = t1 - t0
